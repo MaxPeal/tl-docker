@@ -93,22 +93,25 @@ jobs:
         #"BASE_IMAGE=alpine:edge"
         #"BASE_IMAGE=localhost:5000/my-project/base"
         include:
-          - platform-args: "linux/amd64,linux/arm64,linux/arm/v7"
+          #- platform-args: "linux/amd64,linux/arm64,linux/arm/v7"
+          - platform-args: "linux/amd64"
             #host-os: [ubuntu-16.04, ubuntu-18.04, ubuntu-20.04, ubuntu-latest, windows-2016, windows-2019, windows-2022, macos-10.15, macos-11, macos-12]
-            host-os: ubuntu-20.04
+            host-os: ubuntu-22.04
             #host-os: ubuntu-latest
             tag-args: hostos-test-
             tag-latest: false
             tag-sha: false
             tag-args-enable: true
             tag-args-disable: false
-            build-args: 'BASE_IMAGE=ubuntu:20.04'
+            #build-args: 'BASE_IMAGE=ubuntu:20.04'
+            build-args: 'BASE_IMAGE=ubuntu:22.04'
             #release: false
             #release: ${{ github.event_name != 'pull_request' }} # importent to catch a rogue like PR
             release: true
             experimental: true
           #- platform-args: linux/riscv64
-          - platform-args: "linux/amd64,linux/arm/v5,linux/arm/v7,linux/arm64,linux/386,linux/mips64le,linux/ppc64le,linux/riscv64,linux/s390x"
+          #- platform-args: "linux/amd64,linux/arm/v5,linux/arm/v7,linux/arm64,linux/386,linux/mips64le,linux/ppc64le,linux/riscv64,linux/s390x"
+          - platform-args: "linux/amd64"
             #host-os: ubuntu-latest
             host-os: ubuntu-20.04
             tag-args: debian-unstable-
@@ -123,7 +126,8 @@ jobs:
             experimental: true
           #- platform-args: "linux/386,linux/amd64,linux/arm/v6,linux/arm/v7,linux/arm64,linux/ppc64le,linux/s390x,linux/riscv64"
           # no linux/mips64 support
-          - platform-args: "linux/amd64,linux/arm/v5,linux/arm/v7,linux/arm64,linux/386,linux/mips64le,linux/ppc64le,linux/s390x"
+          #- platform-args: "linux/amd64,linux/arm/v5,linux/arm/v7,linux/arm64,linux/386,linux/mips64le,linux/ppc64le,linux/s390x"
+          - platform-args: "linux/amd64"
             host-os: ubuntu-latest
             tag-args: debian-
             tag-latest: false
@@ -135,7 +139,8 @@ jobs:
             #release: ${{ github.event_name != 'pull_request' }} # importent to catch a rogue like PR
             release: true
             experimental: true
-          - platform-args: "linux/amd64,linux/arm/v7,linux/arm64,linux/ppc64le,linux/riscv64,linux/s390x"
+          #- platform-args: "linux/amd64,linux/arm/v7,linux/arm64,linux/ppc64le,linux/riscv64,linux/s390x"
+          - platform-args: "linux/amd64"
             host-os: ubuntu-20.04
             tag-args: ''
             tag-latest: true
