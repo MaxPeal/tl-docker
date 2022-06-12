@@ -22,6 +22,7 @@ concurrency:
 
 jobs:
   build:
+    name: build
   ###  needs: container-job
     runs-on: ${{ matrix.host-os }}
   ###  continue-on-error: ${{ matrix.experimental }}
@@ -182,6 +183,13 @@ jobs:
         run: |
           echo "${{ format('{0} says {1}', github.actor, matrix.tag-args-enable) }}"
 #######################################################
+# debug
+      - name: bash env set
+        continue-on-error: true
+        run: |
+          env
+          set
+        shell: bash
 
       - name: bash docker system info
         continue-on-error: true
