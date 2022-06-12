@@ -25,7 +25,11 @@ jobs:
     runs-on: ubuntu-20.04
     name: pre_job
     steps:
-      - name: CI Build
+      - name: pre_job Set up Docker Buildx
+        if: ${{ runner.os == 'macOS' || runner.os == 'Linux' || runner.os != 'Windows' }}
+        id: buildx
+        uses: docker/setup-buildx-action@v2.0.0
+      - name: pre_job CI Build
         id: docker_build
         uses: docker/build-push-action@v3.0.0
         with:
