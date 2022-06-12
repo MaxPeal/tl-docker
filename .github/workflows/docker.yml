@@ -1,0 +1,234 @@
+name: Build Docker images
+
+on:
+  push:
+  #  branches: [ master ]
+  workflow_dispatch:
+# https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions#using-secrets
+# https://docs.github.com/en/actions/security-guides/automatic-token-authentication
+permissions:
+  packages: read
+  contents: read
+
+jobs:
+  build:
+  ###  needs: container-job
+    runs-on: ${{ matrix.host-os }}
+  ###  continue-on-error: ${{ matrix.experimental }}
+    # see https://docs.github.com/en/actions/learn-github-actions/workflow-syntax-for-github-actions#jobsjob_idstrategyfail-fast
+    # https://github.com/apache/commons-io/blob/5911ca64d08c110bc7a612dbef2f278d5dd2a9ab/.github/workflows/maven.yml#L23
+    strategy:
+      fail-fast: true
+      matrix:
+        platform-args:
+          - "linux/amd64"
+#          - "linux/amd64/v2"
+#          - "linux/amd64/v3"
+#          - "linux/amd64/v4"
+          - "linux/arm64"
+          - "linux/riscv64"
+          - "linux/ppc64le"
+          - "linux/s390x"
+#          - "linux/386"
+#          - "linux/mips64le"
+#          - "linux/mips64"
+          - "linux/arm/v7"
+#          - "linux/arm/v6"
+          #linux/amd64,linux/amd64/v2,linux/amd64/v3,linux/amd64/v4,linux/arm64,linux/riscv64,linux/ppc64le,linux/s390x,linux/386,linux/mips64le,linux/mips64,linux/arm/v7,linux/arm/v6
+          #- linux/amd64,linux/amd64/v2,linux/amd64/v3,linux/amd64/v4,linux/arm64,linux/riscv64,linux/ppc64le,linux/s390x,linux/386,linux/mips64le,linux/mips64,linux/arm/v7,linux/arm/v6
+          #- "linux/386,linux/amd64,linux/arm/v6,linux/arm/v7,linux/arm64,linux/ppc64le,linux/s390x,linux/riscv64"
+        host-os:
+          #- ubuntu-18.04
+          - ubuntu-20.04
+        release:
+          - false
+        experimental: [true]
+        build-args:
+          - "BASE_IMAGE=ubuntu:20.04"
+          #- "BASE_IMAGE=debian:11.2-slim"
+        #"BASE_IMAGE=alpine:edge"
+        #"BASE_IMAGE=localhost:5000/my-project/base"
+        include:
+          - platform-args: "linux/arm64,linux/arm/v7,linux/arm/v5"
+            host-os: ubuntu-20.04
+            #host-os: ubuntu-latest
+            build-args: 'BASE_IMAGE=debian:11.2-slim'
+            release: false
+            #release: ${{ github.event_name != 'pull_request' }} # importent to catch a rogue like PR
+            experimental: true
+          - platform-args: linux/riscv64
+            #host-os: ubuntu-latest
+            host-os: ubuntu-20.04
+            build-args: 'BASE_IMAGE=debian:unstable-20220527-slim'
+            release: ${{ github.event_name != 'pull_request' }} # importent to catch a rogue like PR
+            experimental: true
+          #- platform-args: "linux/386,linux/amd64,linux/arm/v6,linux/arm/v7,linux/arm64,linux/ppc64le,linux/s390x,linux/riscv64"
+          # no linux/mips64 support
+          - platform-args: "linux/amd64,linux/arm/v7,linux/arm/v5,linux/arm64,linux/ppc64le,linux/s390x,linux/386,linux/mips64le"
+            host-os: ubuntu-latest
+            build-args: 'BASE_IMAGE=debian:11.2-slim'
+            #release: true
+            experimental: true
+    permissions:
+      packages: write
+      contents: read
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3.0.2
+
+      - name: Setup QEMU
+        id: qemu
+        uses: docker/setup-qemu-action@v2.0.0
+        with:
+          platforms: all
+
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v2.0.0
+      - name: Inspect builder
+        run: |
+          echo "Name:      ${{ steps.buildx.outputs.name }}"
+          echo "Endpoint:  ${{ steps.buildx.outputs.endpoint }}"
+          echo "Status:    ${{ steps.buildx.outputs.status }}"
+          echo "Flags:     ${{ steps.buildx.outputs.flags }}"
+          echo "Platforms: ${{ steps.buildx.outputs.platforms }}"
+      - name: Available platforms
+        run: |
+          echo "${{ steps.buildx.outputs.platforms }}"
+          echo "${{ steps.buildx.outputs.platforms }}" | sed -e 's/^/          - \"/' -e 's/,/\"\n          - \"/g' -e 's/$/\"/'
+  
+      # https://github.com/actions/cache#creating-a-cache-key
+      # http://man7.org/linux/man-pages/man1/date.1.html
+      - name: Get Date
+        id: get-date
+        run: |
+          echo "::set-output name=date::$(/bin/date -u "+%Y%m%d")"
+        shell: bash
+      - name: Generate hash of matrix.platform-args
+        shell: bash
+        run: |
+          set -vx
+          hash=$(echo "${{ matrix.platform-args }}" | md5sum | cut -c1-15 )
+          echo "[debug] Generated hash is '${hash}'"
+          echo "::set-output name=hash::$hash"
+          echo "::set-output name=date::$(/bin/date -u "+%Y%m%d")"
+          echo "::set-output name=fulldate::$(/bin/date -u "+%Y%m%dT%H%M%S")"
+          #${{ steps.generate_matrix_platform-args.outputs.hash }}
+        id: generate_matrix_platform-args
+    
+      - name: Cache Docker layers
+        id: buildx-cache
+        uses: actions/cache@v2.1.6
+        with:
+          path: /tmp/.buildx-cache
+          #key: ${{ runner.os }}-buildx-${{ github.sha }}-${{ github.run_id }}
+          #${{ hashFiles('**/go.sum') }}-
+          key: ${{ runner.os }}-buildx-${{ steps.generate_matrix_platform-args.outputs.hash }}-${{ inputs.cache-version }}-${{ github.sha }}-${{ github.run_id }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-${{ steps.generate_matrix_platform-args.outputs.hash }}-${{ inputs.cache-version }}-${{ github.sha }}-${{ github.run_id }}
+            ${{ runner.os }}-buildx-${{ steps.generate_matrix_platform-args.outputs.hash }}-${{ inputs.cache-version }}-${{ github.sha }}-
+            ${{ runner.os }}-buildx-${{ steps.generate_matrix_platform-args.outputs.hash }}-${{ inputs.cache-version }}-
+            ${{ runner.os }}-buildx-${{ steps.generate_matrix_platform-args.outputs.hash }}-
+            ${{ runner.os }}-buildx-
+          #  ${{ runner.os }}-buildx-${{ github.sha }}-${{ github.run_id }}
+          #  ${{ runner.os }}-buildx-${{ github.sha }}-
+          #  ${{ runner.os }}-buildx-
+      # START workaround for --cache-from fails if cache does not already exist
+      - name: Docker cache Fix
+      # see
+      # https://github.com/actions/cache/issues/485
+      # https://github.com/shivammathur/cache-extensions/issues/22
+      # see https://github.com/open-telemetry/opentelemetry-collector-contrib/pull/10365/files#diff-bc668a2c9f2299cef15b222055b4b4d5311646caec2e7610e540cee18ae9b948
+        if: steps.buildx-cache.outputs.cache-hit != 'true'
+        run: echo "START Docker cache Fix" || echo "FROM scratch" | docker buildx build - --cache-to type=local,dest=/tmp/.buildx-cache,mode=max
+        #run: |
+        #  [[ -f /tmp/.buildx-cache/index.json ]] && echo "Skip run of Docker cache Fix" || echo "FROM alpine" | docker buildx build - --cache-to type=local,dest=/tmp/.buildx-cache,mode=max
+      - name: hash matrix.platform-args
+        run: |
+          echo ${{ matrix.platform-args }}
+          echo ${{ matrix.platform-args }} | sort > /tmp/.buildx-cache/matrixplatformargs
+          sha1sum /tmp/.buildx-cache/matrixplatformargs
+          cat /tmp/.buildx-cache/matrixplatformargs
+      # Temp fix1
+      #    https://github.com/docker/buildx/issues/206
+#      - name: cache Fix, if cache does not already exist, create Dockerfile.dummy
+#        run: echo "FROM alpine" > Dockerfile.dummy
+#      - uses: docker/build-push-action@v2
+#        with:
+#          context: .
+#          file: Dockerfile.dummy
+#          platforms: |
+#            linux/amd64
+#          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
+#      - name: cache Fix, Move cache
+#        run: |
+#          set -vx
+#          # delete cache dir if index.json not exist
+#          #[[ -f /tmp/.buildx-cache/index.json ]] || rm -rf /tmp/.buildx-cache
+#          # move dummy docker cache over if index.json not exist
+#          [[ -f /tmp/.buildx-cache/index.json ]] || mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+#      # END workaround for --cache-from fails if cache does not already exist
+
+      - uses: docker/metadata-action@v3.8.0
+        id: meta
+        with:
+          images: |
+            name=ghcr.io/${{ github.repository }}
+            name=${{ github.repository }}
+          tags: |
+            # minimal
+            type=schedule
+            # default
+            type=schedule,pattern=nightly
+            # handlebars
+            type=schedule,pattern={{date 'YYYYMMDD'}}
+            # semver
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha
+            # dynamically set the branch name as a prefix
+            type=sha,prefix={{branch}}-
+            
+            #type=schedule,pattern=master
+            #type=ref,event=branch
+            #type=semver,pattern={{version}}
+            #type=semver,pattern={{major}}.{{minor}}
+            #type=semver,pattern={{major}}
+            #  # minimal
+            # type=semver,pattern={{version}}
+            # use custom value instead of git tag
+            # type=semver,pattern={{version}},value=v1.0.0
+      - name: Login to GitHub
+        uses: docker/login-action@v2.0.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2.0.0
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push
+        id: docker_build
+        uses: docker/build-push-action@v3.0.0
+        with:
+          platforms: ${{ matrix.platform-args }}
+          #"linux/386,linux/amd64,linux/arm/v6,linux/arm/v7,linux/arm64,linux/ppc64le,linux/s390x,linux/riscv64"
+          #linux/amd64,linux/arm/v7,linux/arm64
+          push: ${{ matrix.release && ( github.event_name != 'pull_request' ) }} # importent to catch a rogue like PR
+          #push: ${{ github.event_name != 'pull_request' }}  # importent to catch a rogue like PR
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache,mode=max
+          #cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
+          build-args: ${{ matrix.build-args }}
+
+      - name: Image digest
+        run: echo ${{ steps.docker_build.outputs.digest }}
