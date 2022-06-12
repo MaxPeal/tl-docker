@@ -1,5 +1,9 @@
 #!/bin/sh
 # thinlinc config helper
+
+Echo "fix for not working Regenerate SSH host keys"
+/usr/bin/ssh-keygen -A -v
+
 func=$1
 case $func in
     add-user)
