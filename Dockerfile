@@ -1,5 +1,5 @@
 ARG BASE_IMAGE=ubuntu:20.04
-FROM ubuntu:${BASE_IMAGE}
+FROM ${BASE_IMAGE}
 # yes got to repeat this line ... after FROM all is forgotten
 ARG BASE_IMAGE=ubuntu:20.04
 ENV BASE_IMAGE ${BASE_IMAGE}
