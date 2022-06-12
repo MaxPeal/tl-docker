@@ -1,8 +1,8 @@
-ARG UBUNTU_RELEASE=20.04
-FROM ubuntu:${UBUNTU_RELEASE}
+ARG BASE_IMAGE=ubuntu:20.04
+FROM ubuntu:${BASE_IMAGE}
 # yes got to repeat this line ... after FROM all is forgotten
-ARG UBUNTU_RELEASE=20.04
-ENV UBUNTU_RELEASE ${UBUNTU_RELEASE}
+ARG BASE_IMAGE=ubuntu:20.04
+ENV BASE_IMAGE ${BASE_IMAGE}
 STOPSIGNAL SIGRTMIN+3
 COPY build /build
 RUN cd /build; sh start.sh
