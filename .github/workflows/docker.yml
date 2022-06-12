@@ -21,8 +21,23 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  pre_job:
+    runs-on: ubuntu-20.04
+    name: pre_job
+    steps:
+      - name: CI Build
+        id: docker_build
+        uses: docker/build-push-action@v3.0.0
+        with:
+          platforms: linux/amd64
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: "BASE_IMAGE=ubuntu:20.04"
+
   build:
-    name: build
+    name: build-${{ matrix.matrixjobname }}
+    needs: pre_job
   ###  needs: container-job
     runs-on: ${{ matrix.host-os }}
   ###  continue-on-error: ${{ matrix.experimental }}
@@ -49,6 +64,8 @@ jobs:
           #linux/amd64,linux/amd64/v2,linux/amd64/v3,linux/amd64/v4,linux/arm64,linux/riscv64,linux/ppc64le,linux/s390x,linux/386,linux/mips64le,linux/mips64,linux/arm/v7,linux/arm/v6
           #- linux/amd64,linux/amd64/v2,linux/amd64/v3,linux/amd64/v4,linux/arm64,linux/riscv64,linux/ppc64le,linux/s390x,linux/386,linux/mips64le,linux/mips64,linux/arm/v7,linux/arm/v6
           #- "linux/386,linux/amd64,linux/arm/v6,linux/arm/v7,linux/arm64,linux/ppc64le,linux/s390x,linux/riscv64"
+        matrixjobname: 
+          - "build1"
         #host-os:
           #- ubuntu-18.04
           #- ubuntu-20.04
