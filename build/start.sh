@@ -41,9 +41,9 @@ apt-get install -yq \
     joe \
     man-db \
     net-tools \
-    python-apt \
-    python \
-    ubuntu-desktop
+    python3-apt \
+    python3 \
+    ubuntu-desktop|task-gnome-desktop
 
 apt-get -q -y remove snapd 
 apt-get -qq clean
