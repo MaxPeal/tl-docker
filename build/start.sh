@@ -43,7 +43,7 @@ apt-get install -yq \
     net-tools \
     python3-apt \
     python3 \
-    ubuntu-desktop|task-gnome-desktop
+    'ubuntu-desktop|task-gnome-desktop'
 
 apt-get -q -y remove snapd 
 apt-get -qq clean
